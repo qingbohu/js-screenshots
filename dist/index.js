@@ -8,28 +8,87 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-(() => {
-    // selectionTool.ts
-    let startX, startY;
-    let isSelecting = false;
-    let isDragging = false;
-    let isResizing = false;
-    let initialWidth, initialHeight, initialLeft, initialTop;
-    let currentHandle = null;
-    const selectionBox = createSelectionBox();
-    const contextMenu = createContextMenu();
-    /**
-     * 创建一个可调整大小的选区框并添加到页面中
-     * @returns {HTMLElement} selectionBox 选区框
-     */
-    function createSelectionBox() {
+var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
+    if (kind === "m") throw new TypeError("Private method is not writable");
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
+    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
+};
+var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, state, kind, f) {
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
+    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
+};
+var _SelectionTool_jietuKey, _SelectionTool_videoObj, _SelectionTool_isAutoCopy;
+// selectionTool.ts
+class SelectionTool {
+    constructor(key = 'Enter', params = {
+        isAutoCopy: true
+    }, selectBoxStyle = {
+        borderStyle: {},
+        fourStyle: {}
+    }, callBackFn = {
+        cancelVideo: () => { console.log(`取消了授权权限`); },
+        getSuccessVideo: () => { console.log(`获取授权成功回调`); },
+        overBanck: () => { console.log(`获取授权成功回调`); },
+    }) {
+        this.startX = 0;
+        this.startY = 0;
+        this.isSelecting = false;
+        this.isDragging = false;
+        this.isResizing = false;
+        this.initialWidth = 0;
+        this.initialHeight = 0;
+        this.initialLeft = 0;
+        this.initialTop = 0;
+        this.currentHandle = null;
+        this.cssPath = './css/index.css';
+        _SelectionTool_jietuKey.set(this, void 0);
+        /**视频对象 */
+        _SelectionTool_videoObj.set(this, null
+        /**base64对象 */
+        );
+        /**base64对象 */
+        this.base64Obj = null;
+        /**截屏成功后自动copy到剪切板 */
+        _SelectionTool_isAutoCopy.set(this, true
+        /**用户取消了授权回调 */
+        );
+        this.getSuccessVideo = callBackFn.getSuccessVideo;
+        this.cancelVideo = callBackFn.cancelVideo;
+        this.jietuSuccess = callBackFn.overBanck;
+        __classPrivateFieldSet(this, _SelectionTool_jietuKey, key, "f");
+        this.selectionBox = this.createSelectionBox(selectBoxStyle);
+        this.contextMenu = this.createContextMenu();
+        __classPrivateFieldSet(this, _SelectionTool_isAutoCopy, params.isAutoCopy, "f");
+        this.initializeEventListeners();
+    }
+    loadCSS() {
+        if (document.querySelector(`link[href="${this.cssPath}"]`)) {
+            console.log(`CSS file "${this.cssPath}" is already loaded.`);
+            return;
+        }
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = this.cssPath;
+        document.head.appendChild(link);
+    }
+    /**创建截图选区 */
+    createSelectionBox(style = {
+        borderStyle: {},
+        fourStyle: {}
+    }) {
         const box = document.createElement('div');
         box.id = 'selectionBox';
         box.style.position = 'absolute';
         box.style.border = '2px dashed #000';
-        // box.style.backgroundColor = 'rgba(0, 0, 255, 0.2)';
         box.style.zIndex = '999';
         box.style.display = 'none';
+        // 用户自定义样式 覆盖默认样式
+        Object.keys(style.borderStyle).forEach((key) => {
+            box.style[key] = style.borderStyle[key];
+        });
         document.body.appendChild(box);
         const resizeHandles = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
         resizeHandles.forEach((handle) => {
@@ -39,6 +98,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             div.style.width = '10px';
             div.style.height = '10px';
             div.style.backgroundColor = '#000';
+            // 用户自定义样式 覆盖默认样式
+            Object.keys(style.fourStyle).forEach((key) => {
+                div.style[key] = style.fourStyle[key];
+            });
             if (handle.includes('top'))
                 div.style.top = '-5px';
             if (handle.includes('bottom'))
@@ -55,11 +118,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         });
         return box;
     }
-    /**
-     * 创建右键菜单并添加到页面中
-     * @returns {HTMLElement} contextMenu 右键菜单
-     */
-    function createContextMenu() {
+    createContextMenu() {
         const menu = document.createElement('div');
         menu.id = 'contextMenu';
         menu.style.position = 'absolute';
@@ -78,7 +137,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         li.style.padding = '8px 12px';
         li.style.cursor = 'pointer';
         li.addEventListener('click', () => {
-            selectionBox.style.display = 'none';
+            this.selectionBox.style.display = 'none';
             menu.style.display = 'none';
         });
         li.addEventListener('mouseover', () => {
@@ -92,10 +151,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         document.body.appendChild(menu);
         return menu;
     }
-    /**创建屏幕录制并返回一个视频对象
-     * @returns {Promise<HTMLVideoElement>} video
-     */
-    function screenshot() {
+    screenshot() {
         return __awaiter(this, void 0, void 0, function* () {
             const screenWidth = window.outerWidth;
             const screenHeight = window.outerHeight;
@@ -109,16 +165,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             const stream = yield navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
             const video = document.createElement('video');
             video.srcObject = stream;
-            yield video.play();
-            return video;
+            try {
+                yield video.play();
+                return video;
+            }
+            catch (e) {
+                return e;
+            }
         });
     }
-    /**生成选区内的截图并返回base64编码的PNG数据
-     * @param {HTMLVideoElement} video - 用于截屏的视频元素
-     * @param {HTMLElement} selectionBox - 包含截屏区域的选区框
-     * @returns {Promise<string>} base64 - base64编码的PNG数据
-     */
-    function generateCanvas(video, selectionBox) {
+    /**将截图转成图片 */
+    generateCanvas(video, selectionBox) {
         return __awaiter(this, void 0, void 0, function* () {
             const canvas = document.createElement('canvas');
             canvas.width = selectionBox.offsetWidth;
@@ -134,14 +191,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
                     resolve();
                 }, 100);
             });
-            const base64 = canvas.toDataURL('image/png');
-            return base64;
+            canvas.toBlob(blob => {
+                if (blob) {
+                    const item = new ClipboardItem({ 'image/png': blob });
+                    if (__classPrivateFieldGet(this, _SelectionTool_isAutoCopy, "f")) {
+                        navigator.clipboard.write([item]);
+                    }
+                    this.blobData = blob;
+                }
+            }, 'image/png');
+            this.base64Obj = canvas.toDataURL('image/png');
+            this.jietuSuccess([this.base64Obj, this.blobData]);
+            return [this.base64Obj, this.blobData];
         });
     }
-    /**将文本复制到剪贴板
-     * @param {string} text - 要复制的文本
-     */
-    function copyToClipboard(text) {
+    /**将文字复制到剪切板 */
+    copyToClipboard(text) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 yield navigator.clipboard.writeText(text);
@@ -152,130 +217,127 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
             }
         });
     }
-    /**处理鼠标按下事件，启动选区选择、拖动或调整大小
-     * @param {MouseEvent} event - 鼠标事件
-     */
-    function handleMouseDown(event) {
+    handleMouseDown(event) {
         if (event.button === 2)
             return;
-        if (selectionBox.style.display !== 'block') {
-            startX = event.pageX;
-            startY = event.pageY;
-            isSelecting = true;
-            selectionBox.style.left = `${startX}px`;
-            selectionBox.style.top = `${startY}px`;
-            selectionBox.style.width = '0px';
-            selectionBox.style.height = '0px';
-            selectionBox.style.display = 'block';
+        if (this.selectionBox.style.display !== 'block') {
+            this.startX = event.pageX;
+            this.startY = event.pageY;
+            this.isSelecting = true;
+            this.selectionBox.style.left = `${this.startX}px`;
+            this.selectionBox.style.top = `${this.startY}px`;
+            this.selectionBox.style.width = '0px';
+            this.selectionBox.style.height = '0px';
+            this.selectionBox.style.display = 'block';
         }
         else if (event.target instanceof HTMLElement && event.target.classList.contains('resize-handle')) {
-            isResizing = true;
-            currentHandle = event.target;
-            initialWidth = selectionBox.offsetWidth;
-            initialHeight = selectionBox.offsetHeight;
-            initialLeft = selectionBox.offsetLeft;
-            initialTop = selectionBox.offsetTop;
-            startX = event.pageX;
-            startY = event.pageY;
+            this.isResizing = true;
+            this.currentHandle = event.target;
+            this.initialWidth = this.selectionBox.offsetWidth;
+            this.initialHeight = this.selectionBox.offsetHeight;
+            this.initialLeft = this.selectionBox.offsetLeft;
+            this.initialTop = this.selectionBox.offsetTop;
+            this.startX = event.pageX;
+            this.startY = event.pageY;
         }
-        else if (event.target === selectionBox) {
-            isDragging = true;
-            startX = event.pageX - selectionBox.offsetLeft;
-            startY = event.pageY - selectionBox.offsetTop;
+        else if (event.target === this.selectionBox) {
+            this.isDragging = true;
+            this.startX = event.pageX - this.selectionBox.offsetLeft;
+            this.startY = event.pageY - this.selectionBox.offsetTop;
         }
     }
-    /**处理鼠标移动事件，更新选区选择、拖动或调整大小
-     * @param {MouseEvent} event - 鼠标事件
-     */
-    function handleMouseMove(event) {
-        if (isSelecting) {
+    handleMouseMove(event) {
+        if (this.isSelecting) {
             const currentX = event.pageX;
             const currentY = event.pageY;
-            const width = Math.abs(currentX - startX);
-            const height = Math.abs(currentY - startY);
-            selectionBox.style.width = `${width}px`;
-            selectionBox.style.height = `${height}px`;
-            selectionBox.style.left = `${Math.min(currentX, startX)}px`;
-            selectionBox.style.top = `${Math.min(currentY, startY)}px`;
+            const width = Math.abs(currentX - this.startX);
+            const height = Math.abs(currentY - this.startY);
+            this.selectionBox.style.width = `${width}px`;
+            this.selectionBox.style.height = `${height}px`;
+            this.selectionBox.style.left = `${Math.min(currentX, this.startX)}px`;
+            this.selectionBox.style.top = `${Math.min(currentY, this.startY)}px`;
         }
-        else if (isDragging) {
+        else if (this.isDragging) {
             const currentX = event.pageX;
             const currentY = event.pageY;
-            selectionBox.style.left = `${currentX - startX}px`;
-            selectionBox.style.top = `${currentY - startY}px`;
+            this.selectionBox.style.left = `${currentX - this.startX}px`;
+            this.selectionBox.style.top = `${currentY - this.startY}px`;
         }
-        else if (isResizing && currentHandle) {
+        else if (this.isResizing && this.currentHandle) {
             const currentX = event.pageX;
             const currentY = event.pageY;
-            const dx = currentX - startX;
-            const dy = currentY - startY;
-            if (currentHandle.classList.contains('top-left')) {
-                selectionBox.style.width = `${initialWidth - dx}px`;
-                selectionBox.style.height = `${initialHeight - dy}px`;
-                selectionBox.style.left = `${initialLeft + dx}px`;
-                selectionBox.style.top = `${initialTop + dy}px`;
+            const dx = currentX - this.startX;
+            const dy = currentY - this.startY;
+            if (this.currentHandle.classList.contains('top-left')) {
+                this.selectionBox.style.width = `${this.initialWidth - dx}px`;
+                this.selectionBox.style.height = `${this.initialHeight - dy}px`;
+                this.selectionBox.style.left = `${this.initialLeft + dx}px`;
+                this.selectionBox.style.top = `${this.initialTop + dy}px`;
             }
-            else if (currentHandle.classList.contains('top-right')) {
-                selectionBox.style.width = `${initialWidth + dx}px`;
-                selectionBox.style.height = `${initialHeight - dy}px`;
-                selectionBox.style.top = `${initialTop + dy}px`;
+            else if (this.currentHandle.classList.contains('top-right')) {
+                this.selectionBox.style.width = `${this.initialWidth + dx}px`;
+                this.selectionBox.style.height = `${this.initialHeight - dy}px`;
+                this.selectionBox.style.top = `${this.initialTop + dy}px`;
             }
-            else if (currentHandle.classList.contains('bottom-left')) {
-                selectionBox.style.width = `${initialWidth - dx}px`;
-                selectionBox.style.height = `${initialHeight + dy}px`;
-                selectionBox.style.left = `${initialLeft + dx}px`;
+            else if (this.currentHandle.classList.contains('bottom-left')) {
+                this.selectionBox.style.width = `${this.initialWidth - dx}px`;
+                this.selectionBox.style.height = `${this.initialHeight + dy}px`;
+                this.selectionBox.style.left = `${this.initialLeft + dx}px`;
             }
-            else if (currentHandle.classList.contains('bottom-right')) {
-                selectionBox.style.width = `${initialWidth + dx}px`;
-                selectionBox.style.height = `${initialHeight + dy}px`;
+            else if (this.currentHandle.classList.contains('bottom-right')) {
+                this.selectionBox.style.width = `${this.initialWidth + dx}px`;
+                this.selectionBox.style.height = `${this.initialHeight + dy}px`;
             }
         }
     }
-    /**处理鼠标抬起事件，结束选区选择、拖动或调整大小
-     */
-    function handleMouseUp() {
-        isSelecting = false;
-        isDragging = false;
-        isResizing = false;
+    handleMouseUp() {
+        this.isSelecting = false;
+        this.isDragging = false;
+        this.isResizing = false;
     }
-    /**处理右键菜单事件
-     * @param {MouseEvent} event - 鼠标事件
-     */
-    function handleContextMenu(event) {
-        if (event.target === selectionBox || (event.target instanceof HTMLElement && event.target.parentElement === selectionBox)) {
+    handleContextMenu(event) {
+        if (event.target === this.selectionBox || (event.target instanceof HTMLElement && event.target.parentElement === this.selectionBox)) {
             event.preventDefault();
-            contextMenu.style.top = `${event.pageY}px`;
-            contextMenu.style.left = `${event.pageX}px`;
-            contextMenu.style.display = 'block';
+            this.contextMenu.style.top = `${event.pageY}px`;
+            this.contextMenu.style.left = `${event.pageX}px`;
+            this.contextMenu.style.display = 'block';
         }
         else {
-            contextMenu.style.display = 'none';
+            this.contextMenu.style.display = 'none';
         }
     }
-    /**处理全局点击事件，隐藏右键菜单
-     */
-    function handleClick() {
-        contextMenu.style.display = 'none';
+    handleClick() {
+        this.contextMenu.style.display = 'none';
     }
-    /**处理键盘按下事件，启动截图或生成截图
-     * @param {KeyboardEvent} event - 键盘事件
-     */
-    function handleKeyDown(event) {
+    /**监听键盘按下的事件 */
+    handleKeyDown(event) {
         return __awaiter(this, void 0, void 0, function* () {
-            const video = yield screenshot();
-            document.addEventListener('mousedown', handleMouseDown);
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-            document.addEventListener('contextmenu', handleContextMenu);
-            document.addEventListener('click', handleClick);
-            document.addEventListener('keydown', (event) => __awaiter(this, void 0, void 0, function* () {
-                if (event.key === 'Enter') {
-                    const base64 = yield generateCanvas(video, selectionBox);
-                    yield copyToClipboard(base64);
+            if (event.key === __classPrivateFieldGet(this, _SelectionTool_jietuKey, "f")) {
+                this.loadCSS();
+                if (__classPrivateFieldGet(this, _SelectionTool_videoObj, "f")) {
+                    yield this.generateCanvas(__classPrivateFieldGet(this, _SelectionTool_videoObj, "f"), this.selectionBox);
+                    // await this.copyToClipboard(base64);
                 }
-            }));
+            }
         });
     }
-    window;
-    Object.defineProperty(window, 'jsScreenshots', handleKeyDown);
-})();
+    /**获取录屏权限 */
+    getVideoAuthority() {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.screenshot().then(r => {
+                __classPrivateFieldSet(this, _SelectionTool_videoObj, r, "f");
+            }).catch(e => {
+                this.cancelVideo();
+            });
+        });
+    }
+    initializeEventListeners() {
+        document.addEventListener('mousedown', this.handleMouseDown.bind(this));
+        document.addEventListener('mousemove', this.handleMouseMove.bind(this));
+        document.addEventListener('mouseup', this.handleMouseUp.bind(this));
+        document.addEventListener('contextmenu', this.handleContextMenu.bind(this));
+        document.addEventListener('click', this.handleClick.bind(this));
+        document.addEventListener('keydown', this.handleKeyDown.bind(this));
+    }
+}
+_SelectionTool_jietuKey = new WeakMap(), _SelectionTool_videoObj = new WeakMap(), _SelectionTool_isAutoCopy = new WeakMap();
